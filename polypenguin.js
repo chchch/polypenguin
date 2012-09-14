@@ -118,8 +118,8 @@ PGame = function() {
 		var poopimg = new Image();
 		poopimg.src = "poop.png";
 		poopimg.onload = function() {
-			game.fields[0] = new PField(cpos,csize,"#99ccff",poopimg);
-			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"#99ccff",poopimg);
+			game.fields[0] = new PField(cpos,csize,"bg-1.png",poopimg);
+			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"bg-2.png",poopimg);
 			$("#game").append(game.fields[0].CObj);
 			$("#game").append(game.fields[1].CObj);
 		}
@@ -224,7 +224,7 @@ MBox = function(w,h,o) {
 	}
 }
 
-PField = function(pos, size, c, poopimg) {
+PField = function(pos, size, bgimg, poopimg) {
 	this.CObj = document.createElement("canvas");
 	this.CObj.style.position = "absolute";
 	this.CObj.style.width = size.w + 'px';
@@ -236,7 +236,7 @@ PField = function(pos, size, c, poopimg) {
 	this.CObj.style.top = pos.y + 'px';
 	this.CObj.style.left = pos.x + 'px';
 //	this.CObj.style.border = "1px solid red";
-	this.CObj.style.backgroundColor = c;
+	this.CObj.style.backgroundImage="url('"+bgimg+"')";
 	this.Ctx = this.CObj.getContext('2d');
 //	this.speed = 2;
 	this.active = true;
@@ -323,7 +323,7 @@ PPengu = function(cpos,penguimg) {
 	this.active = false;
 	this.dirty = 0;
 	this.frame = Math.floor(Math.random()*6);
-	this.mode = 0; // 0: walking, 1: jumping, 2: dying
+	this.mode = 1; // 0: walking, 1: jumping, 2: dying
 	this.speed = 4;
 	this.jumpoffset = 0;
 	this.jumpframes = [];
@@ -389,7 +389,7 @@ PPengu = function(cpos,penguimg) {
 	}
 
 	this.jump = function() {
-		self.mode = 1;
+		if(self.mode == 0) self.mode = 1;
 	}
 } 
 
