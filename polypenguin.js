@@ -284,7 +284,8 @@ PField = function(pos, size, bgimg) {
 	this.active = true;
 
 	this.lanes = [];
-	var xoffset = (size.w/8 - game.poopimg.width)/2;
+//	var xoffset = (size.w/8 - game.poopimg.width)/2; // doesn't work in chrome?
+	var xoffset = (size.w/8 - 24)/2;
 	for(var n=0;n<8;n++) {
 		this.lanes[n] = new Object();
 		this.lanes[n].x = Math.round(size.w/8*n+xoffset);
