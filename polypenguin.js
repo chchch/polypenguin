@@ -23,6 +23,7 @@ $(document).ready(function() {
 	
 	game = new PGame();
 	game.init();
+//	game.titlescreen();
 
 	$(document).keydown(function(e) {return KeyCapture(e)});
 	
@@ -49,10 +50,7 @@ KeyCapture = function(e) {
 		return false;
 	} */
 	if(k == 32) { // spacebar
-		if(animator.active) animator.stop();
-		else
-			game.start();
-			
+			game.toggle();
 	}
 	else {
 		var penguarray = [65,83,68,70,74,75,76,59]; // A,S,D,F,J,K,L,;
@@ -93,21 +91,17 @@ PGame = function() {
 		[2],
 		[2,3],
 		[2,3,4],
-		[2,3,4],
-		[2,3,4,5],
 		[2,3,4,5],
 		[2,3,4,5,7],
-		[2,3,4,5,7],
-		[2,3,4,5,7,6],
 		[2,3,4,5,7,6],
 		[2,3,4,5,7,6,9],
-		[2,3,4,5,7,6,9],
-		[2,3,4,5,7,6,9,11],
 		[2,3,4,5,7,6,9,11]
 			];
 	this.levelcount = 0;
 	this.level = this.levels[this.levelcount];
 	this.poopcount = 0;
+	this.mode = 0; // 0: titlescreen, 1: playing, 2: paused, 3: lost
+	this.spritewidth = 50;
 
 	this.init = function() {
 		$("#game").css("width", csize.w + "px");
@@ -115,37 +109,75 @@ PGame = function() {
 		$("#game").css("background", "black");
 		$("#game").css("overflow", "hidden");
 		
-		var poopimg = new Image();
-		poopimg.src = "poop.png";
-		poopimg.onload = function() {
-			game.fields[0] = new PField(cpos,csize,"bg-1.png",poopimg);
-			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"bg-2.png",poopimg);
+		self.poopimg = new Image();
+		self.poopimg.onload = ImgLoaded();
+		self.poopimg.src = "poop.png";
+			
+		self.penguimg = new Image();
+		self.penguimg.src = "pengu.png";
+		self.penguimg.onload = ImgLoaded();
+	}
+	var imgtotal = 2;
+	var imgcount = 0;
+	var ImgLoaded = function() {
+		imgcount++;
+		if(imgcount == imgtotal) {
+			game.fields[0] = new PField(cpos,csize,"bg-1.png");
+			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"bg-2.png");
 			$("#game").append(game.fields[0].CObj);
 			$("#game").append(game.fields[1].CObj);
-		}
-		
-		pwidth = 50;
-		var penguimg = new Image();
-		penguimg.src = "pengu.png";
-		penguimg.onload = function() {
-			var offset = (csize.w/8 - pwidth)/2;
+
+			var offset = (csize.w/8 - self.spritewidth)/2;
 			for(n=0;n<8;n++) {
-				var newpengu = new PPengu(offset + csize.w/8*n,penguimg);
+				var newpengu = new PPengu(offset + csize.w/8*n);
 				self.pengus.push(newpengu);
 				newpengu.init();
 				$("#game").append(newpengu.Div);
 			}
+
+			game.titlescreen();
 		}
-		
-//		self.menus = new Object();
-	
-/*      self.statusbar = new MBox(csize.w-5,14,{x:5,y:5});
-        self.statusbar.CObj.style.border = "1px solid red";
-        self.statusbar.CObj.style.fontSize = "14px";
-        self.statusbar.CObj.style.textAlign = "left";
-        $("#game").append(self.statusbar.CObj); */
+	}
+
+	this.toggle = function() {
+		if(self.mode == 0) {
+			self.story.style.visibility = "hidden";
+			self.start();
 		}
+		else if(self.mode == 1) {
+			animator.stop();
+			self.mode = 2;
+		}
+		else if(self.mode == 2) {
+			animator.start();
+		}
+		else if(self.mode == 3) {
+			self.restart();
+		}
+	}
+
+	this.titlescreen = function() {
+		var Ctx = self.fields[0].Ctx;
+		Ctx.strokeStyle = "#000000";
+		Ctx.font = "normal 40px Courier";
+		Ctx.textAlign = "center";
+		Ctx.strokeText("POLYRHYTHM PENGUIN",csize.w/2,csize.h/2);
+		self.story = document.createElement("div");
+		self.story.style.cssText = "position: absolute;top:260px;margin:0 80px 0 80px;"+
+			"font-family:'Courier';font-style:italic;font-size:12px;text-align:justify";
+		var storytext = "TUX is a penguin who lives in the Artic Circle! He's"+
+			        " in big trouble! GLOBAL WARMING has had a devastating"+
+			        " effect on the Arctic Permafrost, uncovering MILLENIA"+
+			        " of Unscooped Wooly Mammoth Poop in the melting snow!"+
+					" Help TUX keep his feet clean so he and his identical"+
+					" clones can spread FREE SOFTWARE to SANTA'S DATA HAVEN!"+
+					"<br><br>Press SPACEBAR to continue...";
+		self.story.innerHTML = storytext;
+		$("#game").append(self.story);
+	}
+
 	this.start = function() {
+		self.mode = 1;
 		self.fields[1].draw(self.level);
 		var ll = self.level.length;
 		while(ll--) {
@@ -153,13 +185,23 @@ PGame = function() {
 		}
 		animator.start();
 	}
+	this.restart = function() {
+		self.fields[0].clear();
+		var pp = self.pengus.length;
+		while(pp--)
+			self.pengus[pp].hide();
+		self.start();
+	}
+
 	this.lose = function() {
+		self.mode = 3;
 		animator.stop();
+
 	}
 	
 	this.iter = function() {
 		self.poopcount++;
-		if(self.poopcount == 2) {
+		if(self.poopcount == 4) {
 			self.levelup();
 			self.poopcount = 0;
 		}
@@ -224,7 +266,7 @@ MBox = function(w,h,o) {
 	}
 }
 
-PField = function(pos, size, bgimg, poopimg) {
+PField = function(pos, size, bgimg) {
 	this.CObj = document.createElement("canvas");
 	this.CObj.style.position = "absolute";
 	this.CObj.style.width = size.w + 'px';
@@ -240,10 +282,9 @@ PField = function(pos, size, bgimg, poopimg) {
 	this.Ctx = this.CObj.getContext('2d');
 //	this.speed = 2;
 	this.active = true;
-	this.poopimg = poopimg;
 
 	this.lanes = [];
-	var xoffset = (size.w/8 - poopimg.width)/2;
+	var xoffset = (size.w/8 - game.poopimg.width)/2;
 	for(var n=0;n<8;n++) {
 		this.lanes[n] = new Object();
 		this.lanes[n].x = Math.round(size.w/8*n+xoffset);
@@ -259,7 +300,7 @@ PField = function(pos, size, bgimg, poopimg) {
 		while(r--) {
 			for(var n = 0;n < rhythms[r];n++) {
 				var ycoord = Math.round(csize.h/rhythms[r]*n);
-				self.Ctx.drawImage(self.poopimg,self.lanes[ordering[r]].x,ycoord);
+				self.Ctx.drawImage(game.poopimg,self.lanes[ordering[r]].x,ycoord);
 				self.lanes[ordering[r]].y.push(ycoord);
 			}
 		}
@@ -301,12 +342,11 @@ PField = function(pos, size, bgimg, poopimg) {
 
 }
 
-PPengu = function(cpos,penguimg) {
+PPengu = function(cpos) {
 	this.Div = document.createElement("div");
 	this.CObj = document.createElement("canvas");
 	var self = this;
-	this.w = 50;
-	this.penguimg = penguimg;
+	this.w = game.spritewidth;
 	this.h = 100;
 	this.csize = csize;
 	this.Div.width = this.w;
@@ -329,7 +369,7 @@ PPengu = function(cpos,penguimg) {
 	this.jumpframes = [];
 	this.maxjump = 5;
 	for(var n=0;n<this.maxjump;n++) {
-		this.jumpframes.push(6*n*(n-this.maxjump)+50);
+		this.jumpframes.push(6*n*(n-this.maxjump)+this.w);
 	}
 	this.prints = new PPrints(this);
 	this.Div.appendChild(this.prints.CObjs[0]);
@@ -353,8 +393,8 @@ PPengu = function(cpos,penguimg) {
 		var xoffset = self.w*self.frame;
 		var yoffset = self.w*self.mode;
 		if(self.jumpoffset) var jumpoffset = self.jumpframes[self.jumpoffset];
-		else jumpoffset = 50;
-		self.Ctx.drawImage(penguimg,xoffset,yoffset,self.w,self.w,0,jumpoffset,self.w,self.w);
+		else jumpoffset = self.w;
+		self.Ctx.drawImage(game.penguimg,xoffset,yoffset,self.w,self.w,0,jumpoffset,self.w,self.w);
 		
 	}
 
@@ -396,7 +436,7 @@ PPengu = function(cpos,penguimg) {
 PPrints = function(pengu) {
 	var self = this;
 	this.pengu = pengu;
-	this.w = 50;
+	this.w = game.spritewidth;
 	this.h = 100;
 	this.CObjs = [];
 	this.foot = true;
@@ -431,7 +471,7 @@ PPrints = function(pengu) {
 			self.CObjs[0].myVars.y = self.h;
 			self.CObjs[0].style.top = self.h + "px";
 			self.CObjs[0].Ctx.setTransform(1,0,0,1,0,0);
-			self.CObjs[0].Ctx.clearRect(0,0,50,100);
+			self.CObjs[0].Ctx.clearRect(0,0,self.w,self.h);
 			self.CObjs[0].Ctx.translate(0,-10);
 			self.CObjs.push(self.CObjs.shift());
 		}
