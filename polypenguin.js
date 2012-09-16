@@ -88,14 +88,14 @@ PGame = function() {
 	this.pengus = [];
 	this.fields = [];
 	this.levels = [
-		[2],
-		[2,3],
-		[2,3,4],
-		[2,3,4,5],
-		[2,3,4,5,7],
-		[2,3,4,5,7,6],
-		[2,3,4,5,7,6,9],
-		[2,3,4,5,7,6,9,11]
+//		{rhythms: [2], iter: 2},
+//		{rhythms: [2,3], iter: 4}, 
+		{rhythms: [2,3,4], iter: 4},
+		{rhythms: [2,3,4,5], iter: 4},
+		{rhythms: [2,3,4,5,7], iter: 4},
+		{rhythms: [2,3,4,5,7,6], iter: 4},
+		{rhythms: [2,3,4,5,7,6,9], iter: 4},
+		{rhythms: [2,3,4,5,7,6,9,11], iter: 4}
 			];
 	this.levelcount = 0;
 	this.level = this.levels[this.levelcount];
@@ -110,8 +110,8 @@ PGame = function() {
 		$("#game").css("overflow", "hidden");
 		
 		self.poopimg = new Image();
-		self.poopimg.onload = ImgLoaded();
 		self.poopimg.src = "poop.png";
+		self.poopimg.onload = ImgLoaded();
 			
 		self.penguimg = new Image();
 		self.penguimg.src = "pengu.png";
@@ -126,7 +126,6 @@ PGame = function() {
 			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"bg-2.png");
 			$("#game").append(game.fields[0].CObj);
 			$("#game").append(game.fields[1].CObj);
-
 			var offset = (csize.w/8 - self.spritewidth)/2;
 			for(n=0;n<8;n++) {
 				var newpengu = new PPengu(offset + csize.w/8*n);
@@ -135,7 +134,7 @@ PGame = function() {
 				$("#game").append(newpengu.Div);
 			}
 
-			game.titlescreen();
+			self.titlescreen();
 		}
 	}
 
@@ -150,6 +149,7 @@ PGame = function() {
 		}
 		else if(self.mode == 2) {
 			animator.start();
+			self.mode = 1;
 		}
 		else if(self.mode == 3) {
 			self.restart();
@@ -179,17 +179,29 @@ PGame = function() {
 	this.start = function() {
 		self.mode = 1;
 		self.fields[1].draw(self.level);
-		var ll = self.level.length;
+		self.fields[0].force_redraw = true;
+		var ll = self.level.rhythms.length;
 		while(ll--) {
 			self.pengus[ordering[ll]].show();
 		}
 		animator.start();
 	}
 	this.restart = function() {
-		self.fields[0].clear();
+		self.fields[0].reset();
+		self.fields[0].pos.y = 0;
+		self.fields[1].reset();
+		self.fields[1].pos.y = csize.h;
 		var pp = self.pengus.length;
-		while(pp--)
+		while(pp--) {
 			self.pengus[pp].hide();
+			self.pengus[pp].prints.clear();
+			self.pengus[pp].dirty = 0;
+			self.pengus[pp].mode = 1;
+			self.pengus[pp].maxframe = 1;
+		}
+		self.levelcount = 0;
+		self.level = self.levels[0];
+		self.poopcount = 0;
 		self.start();
 	}
 
@@ -201,10 +213,12 @@ PGame = function() {
 	
 	this.iter = function() {
 		self.poopcount++;
-		if(self.poopcount == 4) {
+		if(self.poopcount == self.level.iter) {
 			self.levelup();
 			self.poopcount = 0;
-		}
+			self.fields[0].force_redraw = true;
+			self.fields[1].force_redraw = true;
+		} 
 	}
 	this.levelup = function() {
 		self.levelcount++;
@@ -213,7 +227,7 @@ PGame = function() {
 		var pp = 8;
 		while(pp--)
 			self.pengus[pp].hide();
-		var ll = self.level.length;
+		var ll = self.level.rhythms.length;
 		while(ll--) 
 			self.pengus[ordering[ll]].show();
 	}
@@ -282,9 +296,10 @@ PField = function(pos, size, bgimg) {
 	this.Ctx = this.CObj.getContext('2d');
 //	this.speed = 2;
 	this.active = true;
+	this.force_redraw = false;
 
 	this.lanes = [];
-//	var xoffset = (size.w/8 - game.poopimg.width)/2; // doesn't work in chrome?
+//	var xoffset = (size.w/8 - game.poopimg.naturalWidth)/2; // doesn't work in some browsers?
 	var xoffset = (size.w/8 - 24)/2;
 	for(var n=0;n<8;n++) {
 		this.lanes[n] = new Object();
@@ -296,7 +311,8 @@ PField = function(pos, size, bgimg) {
 
 	var self = this;
 
-	this.draw = function(rhythms) {
+	this.draw = function(level) {
+		var rhythms = level.rhythms;
 		var r = rhythms.length;
 		while(r--) {
 			for(var n = 0;n < rhythms[r];n++) {
@@ -307,37 +323,46 @@ PField = function(pos, size, bgimg) {
 		}
 	}
 	
-	self.clear = function() {
+	this.clear = function() {
 		self.Ctx.clearRect(0,0,self.size.w,self.size.h);
 	}
+	this.reset = function() {
+		self.clear();
+		for(var n=0;n<8;n++)
+			self.lanes[n].y = [];
+	}
+
 	this.animate = function() {
 		self.pos.y--;
 		if(self.pos.y + csize.h == 0) {
 			self.pos.y = csize.h;
 			game.iter();
-			self.clear(); // don't clear unless you level up
-			self.draw(game.level);
+//			if(self.force_redraw) {
+				self.clear(); // TODO: don't clear/draw unless you level up
+				self.draw(game.level);
+//				self.force_redraw = false;
+//			}
 		}
 		self.CObj.style.top = self.pos.y + "px";
 		var nn = 8;
 		while(nn--) {
-	
+
 				if(self.lanes[nn].pooping) {
 					self.lanes[nn].pooping--;
 					if(game.pengus[nn].mode != 1) {
 						game.pengus[nn].dirty += 20;
-						if(game.pengus[nn].dirty > 1000) game.pengus[nn].fall();
+						if(game.pengus[nn].dirty > 500) game.pengus[nn].fall();
 					}
 				}
 				else if(game.pengus[nn].dirty) game.pengus[nn].dirty--;
 				
-				if(self.lanes[nn].y.length != 0) {
-					if(self.lanes[nn].y[0] + self.pos.y == 100) {
-						self.lanes[nn].y.shift();
-						self.lanes[nn].pooping = 15;
-					}
+			if(self.lanes[nn].y.length != 0) {
+				if(self.lanes[nn].y[0] + self.pos.y == 100) {
+					self.lanes[nn].y.shift();
+					self.lanes[nn].pooping = 15;
 				}
 
+			}
 		}
 	}
 
@@ -366,12 +391,18 @@ PPengu = function(cpos) {
 	this.frame = Math.floor(Math.random()*6);
 	this.mode = 1; // 0: walking, 1: jumping, 2: dying
 	this.speed = 4;
-	this.jumpoffset = 0;
+	this.yframe = 0;
 	this.jumpframes = [];
 	this.maxjump = 5;
+	this.maxframe = 1; // 5: walking, 1: jumping, 8: dying
+	this.fallframes = [];
 	for(var n=0;n<this.maxjump;n++) {
-		this.jumpframes.push(6*n*(n-this.maxjump)+this.w);
+		this.jumpframes.push(Math.round(6*n*(n-this.maxjump)+this.w));
 	}
+	for(var n=0;n<9;n++) {
+		this.fallframes.push(Math.round(0.77*n*(n-16)+this.w));
+	}
+
 	this.prints = new PPrints(this);
 	this.Div.appendChild(this.prints.CObjs[0]);
 	this.Div.appendChild(this.prints.CObjs[1]);
@@ -390,12 +421,11 @@ PPengu = function(cpos) {
 		self.prints.active = false;
 		self.CObj.style.visibility = "hidden";
 	}
-	this.draw = function() {
-		var xoffset = self.w*self.frame;
-		var yoffset = self.w*self.mode;
-		if(self.jumpoffset) var jumpoffset = self.jumpframes[self.jumpoffset];
-		else jumpoffset = self.w;
-		self.Ctx.drawImage(game.penguimg,xoffset,yoffset,self.w,self.w,0,jumpoffset,self.w,self.w);
+	this.draw = function(yy) {
+		var xcrop = self.w*self.frame;
+		var ycrop = self.w*self.mode;
+		var yoffset = yy || self.w;
+		self.Ctx.drawImage(game.penguimg,xcrop,ycrop,self.w,self.w,0,yoffset,self.w,self.w);
 		
 	}
 
@@ -406,31 +436,40 @@ PPengu = function(cpos) {
 		self.Ctx.clearRect(0,0,self.w,self.h);
 	}
 	this.fall = function() {
+		self.frame = 0;
 		self.mode = 2;
+		self.maxframe = 8;
 	}	
 	
 	this.animate = function() {
-		var max = 5;
+		var yoffset = 0;
 		self.clear();
 		if(self.mode == 1) {
-			max = 1;
-			if(self.jumpoffset < self.maxjump) self.jumpoffset++;
+			if(self.yframe < self.maxjump) {
+				yoffset = self.jumpframes[self.yframe];
+				self.yframe++;
+			}
 			else {
-				self.jumpoffset = 0;
+				self.yframe = 0;
 				self.mode = 0;
+				self.maxframe = 5;
 			}
 		}
 		if(self.mode == 2) {
-			max = 6;
+			yoffset = self.fallframes[self.yframe];
+			self.yframe++;
 		}
-		self.draw();
-		if(self.frame < max) self.frame++;
+		self.draw(yoffset);
+		if(self.frame < self.maxframe) self.frame++;
 		else if(self.mode == 2) game.lose();
 		else self.frame = 0;
 	}
 
 	this.jump = function() {
-		if(self.mode == 0) self.mode = 1;
+		if(self.mode == 0) {
+			self.mode = 1;
+			self.maxframe = 1;
+		}
 	}
 } 
 
@@ -461,6 +500,12 @@ PPrints = function(pengu) {
 
 	animator.enqueue(self);
 	
+	this.clear = function() {
+		this.CObjs[0].Ctx.setTransform(1,0,0,1,0,0);
+		this.CObjs[0].Ctx.clearRect(0,0,self.w,self.h);
+		this.CObjs[1].Ctx.setTransform(1,0,0,1,0,0);
+		this.CObjs[1].Ctx.clearRect(0,0,self.w,self.h);
+	}
 	this.animate = function() {
 		self.printcounter++;
 		var pp = 2;
@@ -489,7 +534,7 @@ PPrints = function(pengu) {
 				}
 				if(self.pengu.dirty) 
 					Ctx.fillStyle = "rgba(60,43,0,"+
-						self.pengu.dirty/100+")";
+						self.pengu.dirty/300+")";
 //						500/self.pengu.dirty+")"; 
 //					Ctx.fillStyle = "rgba(85,65,0,0.6)";
 				else
