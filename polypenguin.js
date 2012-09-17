@@ -57,7 +57,9 @@ KeyCapture = function(e) {
 		var penguindex = $.inArray(k,penguarray);
 		if(penguindex != -1 || k == 186) { // 186 is ; in some browsers 
 			if(k == 186) penguindex = 7;
-			game.pengus[penguindex].jump();
+			game.pengus[penguindex].toggle();
+			if(game.visiblekeys.indexOf(penguindex) != -1)
+				game.flashkey(penguindex,game.activefield,game.keyheight);
 			if(is_chrome) sounds[k].play();
 			else
 				sounds[k].cloneNode(false).play();
@@ -87,21 +89,50 @@ PGame = function() {
 	var self = this;
 	this.pengus = [];
 	this.fields = [];
-	this.levels = [
-//		{rhythms: [2], iter: 2},
-//		{rhythms: [2,3], iter: 4}, 
-		{rhythms: [2,3,4], iter: 4},
-		{rhythms: [2,3,4,5], iter: 4},
-		{rhythms: [2,3,4,5,7], iter: 4},
-		{rhythms: [2,3,4,5,7,6], iter: 4},
-		{rhythms: [2,3,4,5,7,6,9], iter: 4},
-		{rhythms: [2,3,4,5,7,6,9,11], iter: 4}
-			];
-	this.levelcount = 0;
-	this.level = this.levels[this.levelcount];
 	this.poopcount = 0;
 	this.mode = 0; // 0: titlescreen, 1: playing, 2: paused, 3: lost
 	this.spritewidth = 50;
+	this.keyheight = 330;
+
+	this.calcLevels = function(arr) {
+		var qq = arr.length;
+		var returnarr = [];
+		while(qq--) {
+			var returnob = new Object();
+			returnob.lanes = [];
+			returnob.iter = arr[qq].iter;
+			var rhythms = returnob.rhythms = arr[qq].rhythms;
+			returnob.common = [];
+			var allpoops = [];
+			var r = rhythms.length;
+			while(r--) {
+				returnob.lanes[ordering[r]] = new Object();
+				returnob.lanes[ordering[r]].y = [];
+				for(var n = 0;n < rhythms[r];n++) {
+					var ycoord = (csize.h/rhythms[r]*n + 0.5) | 0; //rounding hack
+					if(allpoops.indexOf(ycoord) != -1 &&
+							returnob.common.indexOf(ycoord) == -1)
+						returnob.common.push(ycoord);
+					returnob.lanes[ordering[r]].y.push(ycoord);
+					allpoops.push(ycoord);
+				}
+			}
+			returnarr.unshift(returnob);
+		}
+		return returnarr;
+	}
+	this.levels = this.calcLevels([
+		{rhythms: [2], iter: 2},
+		{rhythms: [2,3], iter: 4}, 
+		{rhythms: [2,3,4], iter: 4},
+		{rhythms: [2,3,4,5], iter: 4},
+		{rhythms: [2,3,4,5,7], iter: 5},
+		{rhythms: [2,3,4,5,7,6], iter: 6},
+		{rhythms: [2,3,4,5,7,6,9], iter: 7},
+		{rhythms: [2,3,4,5,7,6,9,11], iter: 8}
+			]);
+	this.levelcount = 0;
+	this.level = this.levels[this.levelcount];
 
 	this.init = function() {
 		$("#game").css("width", csize.w + "px");
@@ -116,74 +147,173 @@ PGame = function() {
 		self.penguimg = new Image();
 		self.penguimg.src = "pengu.png";
 		self.penguimg.onload = ImgLoaded();
-	}
+
+		
+		}
 	var imgtotal = 2;
 	var imgcount = 0;
 	var ImgLoaded = function() {
 		imgcount++;
 		if(imgcount == imgtotal) {
-			game.fields[0] = new PField(cpos,csize,"bg-1.png");
-			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"bg-2.png");
+			game.fields[0] = new PField(cpos,csize,"bg-1.png",0);
+			game.fields[1] = new PField({x:cpos.x,y:cpos.y+csize.h},csize,"bg-2.png",1);
 			$("#game").append(game.fields[0].CObj);
 			$("#game").append(game.fields[1].CObj);
+			game.activefield = game.fields[0];
+
 			var offset = (csize.w/8 - self.spritewidth)/2;
 			for(n=0;n<8;n++) {
 				var newpengu = new PPengu(offset + csize.w/8*n);
 				self.pengus.push(newpengu);
-				newpengu.init();
+				newpengu.draw(); // Firefox doesn't draw the pengu in the
+								 // keytest screen on the first press for some
+								 // reason; this seems to fix it
 				$("#game").append(newpengu.Div);
 			}
-
+			self.titlecard = 0;
 			self.titlescreen();
 		}
 	}
 
 	this.toggle = function() {
 		if(self.mode == 0) {
-			self.story.style.visibility = "hidden";
-			self.start();
+			if(self.titlescreen()) {
+				self.start();
+			}
 		}
 		else if(self.mode == 1) {
 			animator.stop();
+			self.story.innerHTML = "<p style='font-size:20px;font-style:normal;color: #FFFFFF'>"+
+				"POLYPENGUIN PAUSE!</p><p style='color: #FFFFFF'>Press SPACEBAR to continue...</p>";
+			self.story.style.visibility = "visible";
+			self.overlay.style.visibility = "visible";
 			self.mode = 2;
 		}
 		else if(self.mode == 2) {
+			self.story.style.visibility = "hidden";
+			self.overlay.style.visibility = "hidden";
 			animator.start();
 			self.mode = 1;
 		}
 		else if(self.mode == 3) {
+			self.overlay.style.visibility = "hidden";
 			self.restart();
 		}
 	}
 
 	this.titlescreen = function() {
 		var Ctx = self.fields[0].Ctx;
-		Ctx.strokeStyle = "#000000";
-		Ctx.font = "normal 40px Courier";
-		Ctx.textAlign = "center";
-		Ctx.strokeText("POLYRHYTHM PENGUIN",csize.w/2,csize.h/2);
-		self.story = document.createElement("div");
-		self.story.style.cssText = "position: absolute;top:260px;margin:0 80px 0 80px;"+
-			"font-family:'Courier';font-style:italic;font-size:12px;text-align:justify";
-		var storytext = "TUX is a penguin who lives in the Artic Circle! He's"+
-			        " in big trouble! GLOBAL WARMING has had a devastating"+
-			        " effect on the Arctic Permafrost, uncovering MILLENIA"+
-			        " of Unscooped Wooly Mammoth Poop in the melting snow!"+
-					" Help TUX keep his feet clean so he and his identical"+
-					" clones can spread FREE SOFTWARE to SANTA'S DATA HAVEN!"+
-					"<br><br>Press SPACEBAR to continue...";
-		self.story.innerHTML = storytext;
-		$("#game").append(self.story);
+		if(self.titlecard == 0) {
+			Ctx.strokeStyle = "#000000";
+			Ctx.font = "normal 40px Courier";
+			Ctx.textAlign = "center";
+			Ctx.strokeText("POLYRHYTHM PENGUIN",csize.w/2,csize.h/2);
+			self.story = document.createElement("div");
+			self.story.style.cssText = "position: absolute;top:260px;margin:0 80px 0 80px;"+
+				"font-family:'Courier';font-style:italic;font-size:12px;text-align:justify";
+			var storytext = "TUX is a penguin who lives in the Artic Circle! He's"+
+						" in big trouble! GLOBAL WARMING has had a devastating"+
+						" effect on the Arctic Permafrost, uncovering MILLENIA"+
+						" of Unscooped Wooly Mammoth Poop in the melting snow!"+
+						" Help TUX keep his feet clean so he and his identical"+
+						" clones can spread FREE SOFTWARE to SANTA'S DATA HAVEN!"+
+						"<br><br>Press SPACEBAR to continue...";
+			self.story.innerHTML = storytext;
+			
+			self.overlay = document.createElement("div");
+			self.overlay.style.cssText =
+				"position:absolute;width:"+csize.w+"px;height:"+csize.h+"px;"+
+				"background-color: #555555;opacity: 0.5;visibility: hidden";
+			$("#game").append(self.overlay);
+			
+			$("#game").append(self.story);
+			self.titlecard++;
+			return false;
+		}
+		if(self.titlecard == 1) {
+			self.story.innerHTML = "Use these keys to help Tux and his friends"+
+									" jump over the evil Wooly Mammoth Poop!"+
+									" Try it!<br><br>When you're ready, press"+
+									" SPACEBAR to start...";
+			self.drawkeys();
+			self.titlecard++;
+			return false;
+		}
+		if(self.titlecard == 2) {
+			self.story.style.visibility = "hidden";
+			var clearkeys = [];
+			var nn = self.level.rhythms.length;
+			while(nn < 8) {
+				clearkeys.push(ordering[nn]);
+				clearTimeout(self.keyOuts[ordering[nn]]);
+				nn++;
+			}
+			self.clearkeys(clearkeys);
+			return true;
+		}
 	}
-
-	this.start = function() {
+	
+	this.visiblekeys = [];
+	this.drawkeys = function(keys,field,height) {
+		var keys = keys ? keys : [0,1,2,3,4,5,6,7];
+		var Ctx = field ? field.Ctx : self.fields[0].Ctx;
+		var yy = height ? height : 330;
+		var kkeys = ["A","S","D","F","J","K","L",";"];
+		self.clearkeys(keys,field,height);
+		var offset = (csize.w/8-35)/2;
+		Ctx.strokeStyle = "#222222";
+		Ctx.font = "normal 18px Courier";
+		Ctx.textAlign = "center";
+		for(var k=0,kk=keys.length;k<kk;k++) {
+			var xx = offset+csize.w/8*keys[k];
+			Ctx.roundRect(xx,yy,xx+35,yy+35,3);
+			Ctx.stroke();
+			Ctx.strokeText(kkeys[keys[k]],csize.w/8*(1/2+keys[k]),yy+22);
+			if(self.visiblekeys.indexOf(keys[k]) == -1)
+				self.visiblekeys.push(keys[k]);
+		}
+	}
+	this.keyOuts = [];
+	this.flashkey = function(key,field,height) {
+		if(!self.keyOuts[key]) {
+			var Ctx = field ? field.Ctx : self.fields[0].Ctx;
+			var yy = height ? height : 330;
+			var offset = (csize.w/8-35)/2+0.5;
+			var xx = offset+csize.w/8*key;
+			Ctx.fillStyle = "rgba(0,0,0,0.3)";
+			Ctx.fillRect(xx,yy+0.5,34,34);
+			self.keyOuts[key] =
+				setTimeout(function(){self.drawkeys([key],field,height);self.keyOuts.splice(key,1);},100);
+		}
+	}
+	this.clearkeys = function(keys,field,height) {
+		var keys = keys ? keys : [0,1,2,3,4,5,6,7];
+		var Ctx = field ? field.Ctx : self.fields[0].Ctx;
+		var yy = height ? height : 329;
+		var offset = (csize.w/8-35)/2-1;
+		for(var k=0,kk=keys.length;k<kk;k++) {
+			var xx = offset+csize.w/8*keys[k];
+			Ctx.clearRect(xx,yy,37,37);
+			self.visiblekeys.splice(self.visiblekeys.indexOf(keys[k]),1);
+			if(self.keyOuts[k]) self.keyOuts.splice(k,1);
+		}	
+	}
+	this.start = function(restart) {
+		var restart = restart ? restart : false;
 		self.mode = 1;
 		self.fields[1].draw(self.level);
+		self.fields[1].active = true;
 		self.fields[0].force_redraw = true;
+		self.fields[0].active = true;
+		
+		var pp = self.pengus.length;
+		while(pp--)
+			self.pengus[pp].init(restart);	
 		var ll = self.level.rhythms.length;
 		while(ll--) {
 			self.pengus[ordering[ll]].show();
 		}
+		
 		animator.start();
 	}
 	this.restart = function() {
@@ -191,43 +321,57 @@ PGame = function() {
 		self.fields[0].pos.y = 0;
 		self.fields[1].reset();
 		self.fields[1].pos.y = csize.h;
-		var pp = self.pengus.length;
-		while(pp--) {
-			self.pengus[pp].hide();
-			self.pengus[pp].prints.clear();
-			self.pengus[pp].dirty = 0;
-			self.pengus[pp].mode = 1;
-			self.pengus[pp].maxframe = 1;
-		}
 		self.levelcount = 0;
 		self.level = self.levels[0];
 		self.poopcount = 0;
-		self.start();
+		self.story.style.visibility = "hidden";
+		self.start(true);
 	}
 
 	this.lose = function() {
 		self.mode = 3;
+		self.story.innerHTML = "<p style='font-size:20px;font-style:normal;color:#FFFFFF'>"+
+			"Tux fainted from being too DIRTY!</p><p style='color:#FFFFFF'>Press"+
+			" SPACEBAR to try again...</p>";
+		self.story.style.visibility = "visible";
+		self.overlay.style.visibility = "visible";
 		animator.stop();
 
 	}
 	
-	this.iter = function() {
+	this.iter = function(whichfield) {
+		var af = whichfield ? 0 : 1;
+		self.activefield = self.fields[af];
+		var ss = self.keyOuts.length;
+		while(ss--)
+			clearTimeout(self.keyOuts[ss]);
+		self.keyOuts = [];
+		self.visiblekeys = [];
+
 		self.poopcount++;
 		if(self.poopcount == self.level.iter) {
 			self.levelup();
 			self.poopcount = 0;
-			self.fields[0].force_redraw = true;
-			self.fields[1].force_redraw = true;
+//			self.fields[0].force_redraw = true; // redraw every time?
+//			self.fields[1].force_redraw = true;
 		} 
 	}
 	this.levelup = function() {
 		self.levelcount++;
+		var oldll = self.level.rhythms.length;
 		if(self.levelcount < self.levels.length)
 			self.level = self.levels[self.levelcount];
-		var pp = 8;
-		while(pp--)
-			self.pengus[pp].hide();
 		var ll = self.level.rhythms.length;
+		var pp = 8;
+		var drawkeys = [];
+		while(pp-- >= ll)
+			self.pengus[ordering[pp]].hide();
+		while(oldll < ll) {
+			drawkeys.push(ordering[oldll]);
+			oldll++;
+		}
+		self.drawkeys(drawkeys,self.fields[self.activefield],50);
+		self.keyheight = 50;
 		while(ll--) 
 			self.pengus[ordering[ll]].show();
 	}
@@ -280,7 +424,8 @@ MBox = function(w,h,o) {
 	}
 }
 
-PField = function(pos, size, bgimg) {
+PField = function(pos, size, bgimg, order) {
+	this.order = order;
 	this.CObj = document.createElement("canvas");
 	this.CObj.style.position = "absolute";
 	this.CObj.style.width = size.w + 'px';
@@ -295,8 +440,8 @@ PField = function(pos, size, bgimg) {
 	this.CObj.style.backgroundImage="url('"+bgimg+"')";
 	this.Ctx = this.CObj.getContext('2d');
 //	this.speed = 2;
-	this.active = true;
-	this.force_redraw = false;
+	this.active = false;
+//	this.force_redraw = false;
 
 	this.lanes = [];
 //	var xoffset = (size.w/8 - game.poopimg.naturalWidth)/2; // doesn't work in some browsers?
@@ -315,10 +460,14 @@ PField = function(pos, size, bgimg) {
 		var rhythms = level.rhythms;
 		var r = rhythms.length;
 		while(r--) {
+			self.lanes[ordering[r]].y = clone(game.level.lanes[ordering[r]].y);
 			for(var n = 0;n < rhythms[r];n++) {
-				var ycoord = Math.round(csize.h/rhythms[r]*n);
-				self.Ctx.drawImage(game.poopimg,self.lanes[ordering[r]].x,ycoord);
-				self.lanes[ordering[r]].y.push(ycoord);
+	//			var ycoord = (csize.h/rhythms[r]*n + 0.5) | 0; //rounding hack
+	//			var ycoord = game.level.lanes[ordering[r]].y[n];
+				var ycoord = self.lanes[ordering[r]].y[n];
+				var ycrop = (game.level.common.indexOf(ycoord) != -1) ? 20 : 0;
+				self.Ctx.drawImage(game.poopimg,0,ycrop,24,20,self.lanes[ordering[r]].x,ycoord,24,20);
+	//			self.lanes[ordering[r]].y.push(ycoord);
 			}
 		}
 	}
@@ -336,9 +485,9 @@ PField = function(pos, size, bgimg) {
 		self.pos.y--;
 		if(self.pos.y + csize.h == 0) {
 			self.pos.y = csize.h;
-			game.iter();
-//			if(self.force_redraw) {
-				self.clear(); // TODO: don't clear/draw unless you level up
+			game.iter(self.order);
+//			if(self.force_redraw) { // redraw every time?
+				self.clear();
 				self.draw(game.level);
 //				self.force_redraw = false;
 //			}
@@ -347,14 +496,14 @@ PField = function(pos, size, bgimg) {
 		var nn = 8;
 		while(nn--) {
 
-				if(self.lanes[nn].pooping) {
-					self.lanes[nn].pooping--;
-					if(game.pengus[nn].mode != 1) {
-						game.pengus[nn].dirty += 20;
-						if(game.pengus[nn].dirty > 500) game.pengus[nn].fall();
-					}
+			if(self.lanes[nn].pooping) {
+				self.lanes[nn].pooping--;
+				if(game.pengus[nn].mode != 1) {
+					game.pengus[nn].dirty += 20;
+					if(game.pengus[nn].dirty > 500) game.pengus[nn].fall();
 				}
-				else if(game.pengus[nn].dirty) game.pengus[nn].dirty--;
+			}
+			else if(game.pengus[nn].dirty) game.pengus[nn].dirty--;
 				
 			if(self.lanes[nn].y.length != 0) {
 				if(self.lanes[nn].y[0] + self.pos.y == 100) {
@@ -388,8 +537,9 @@ PPengu = function(cpos) {
 	this.Ctx = this.CObj.getContext("2d"); 
 	this.active = false;
 	this.dirty = 0;
-	this.frame = Math.floor(Math.random()*6);
-	this.mode = 1; // 0: walking, 1: jumping, 2: dying
+//	this.frame = Math.floor(Math.random()*6);
+	this.frame = 0;
+	this.mode = 1; // 0: walking, 1: jumping, 2: dying, 3: demo
 	this.speed = 4;
 	this.yframe = 0;
 	this.jumpframes = [];
@@ -429,18 +579,37 @@ PPengu = function(cpos) {
 		
 	}
 
-	this.init = function() {
-		self.draw();
+	this.init = function(restart) {
+		self.frame = 0;
+		self.mode = 1;
+		self.maxframe = 1;
+		self.yframe = 0;
+		self.hide();
+		if(restart) {
+			self.prints.clear();
+			self.dirty = 0;
+		}
+
 	}
 	this.clear = function() {
 		self.Ctx.clearRect(0,0,self.w,self.h);
 	}
 	this.fall = function() {
-		self.frame = 0;
 		self.mode = 2;
+		self.frame = 0;
+		self.yframe = 0;
 		self.maxframe = 8;
 	}	
 	
+	this.demo = function() {
+		self.active = true;
+		self.CObj.style.visibility = "visible";
+		self.yframe = 0;
+		self.mode = 1;
+		self.maxframe = 1;
+		animator.start();
+	}
+
 	this.animate = function() {
 		var yoffset = 0;
 		self.clear();
@@ -453,6 +622,7 @@ PPengu = function(cpos) {
 				self.yframe = 0;
 				self.mode = 0;
 				self.maxframe = 5;
+				if(game.mode == 0) self.hide();
 			}
 		}
 		if(self.mode == 2) {
@@ -470,6 +640,12 @@ PPengu = function(cpos) {
 			self.mode = 1;
 			self.maxframe = 1;
 		}
+	}
+
+	this.toggle = function() {
+		if(game.mode == 0)
+			self.demo();
+		else self.jump();
 	}
 } 
 
@@ -606,16 +782,21 @@ function Animator() {
 			var dd = self.dqueue.length;
 			if(dd) {
 				self.frame++;
-				active++;
+				// active++; // TODO: this sucks
 				var d = dd;
 				while(d--) {
-					if(typeof self.dqueue[d] != 'undefined' && 
-					   self.frame % d == 0) {
-						var n = self.dqueue[d].length;
-						while(n--) {
-							if(self.dqueue[d][n].active) {
-								self.dqueue[d][n].animate();
+					if(typeof self.dqueue[d] != 'undefined') {
+						active++;
+						if(self.frame % d == 0) {
+							var n = self.dqueue[d].length;
+							var subactive = 0;
+							while(n--) {
+								if(self.dqueue[d][n].active) {
+									self.dqueue[d][n].animate();
+									subactive++;
+								}
 							}
+							if(subactive == 0) active--;
 						}
 					}
 				}
@@ -646,6 +827,26 @@ if(!Array.prototype.last) {
         return this[this.length - 1];
     }
 }
+
+// Rounded rectangles from StackOverflow
+(function() {
+	CanvasRenderingContext2D.prototype.roundRect = function(sx,sy,ex,ey,r) {
+		var r2d = Math.PI/180;
+		if( ( ex - sx ) - ( 2 * r ) < 0 ) { r = ( ( ex - sx ) / 2 ); }
+		if( ( ey - sy ) - ( 2 * r ) < 0 ) { r = ( ( ey - sy ) / 2 ); }
+		this.beginPath();
+		this.moveTo(sx+r,sy);
+		this.lineTo(ex-r,sy);
+		this.arc(ex-r,sy+r,r,r2d*270,r2d*360,false);
+		this.lineTo(ex,ey-r);
+		this.arc(ex-r,ey-r,r,r2d*0,r2d*90,false);
+		this.lineTo(sx+r,ey);
+		this.arc(sx+r,ey-r,r,r2d*90,r2d*180,false);
+		this.lineTo(sx,sy+r);
+		this.arc(sx+r,sy+r,r,r2d*180,r2d*270,false);
+		this.closePath();
+	}
+}());
 
 (function() {
     var lastTime = 0;
