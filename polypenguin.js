@@ -496,21 +496,24 @@ PField = function(pos, size, bgimg, order) {
 		var nn = 8;
 		while(nn--) {
 
-			if(self.lanes[nn].pooping) {
-				self.lanes[nn].pooping--;
-				if(game.pengus[nn].mode != 1) {
-					game.pengus[nn].dirty += 20;
-					if(game.pengus[nn].dirty > 500) game.pengus[nn].fall();
+			if(game.pengus[nn].dirty > 500 && game.pengus[nn].mode != 2) 
+				game.pengus[nn].fall();
+			else {
+				if(self.lanes[nn].pooping) {
+					self.lanes[nn].pooping--;
+					if(game.pengus[nn].mode != 1) {
+						game.pengus[nn].dirty += 20;
+					}
 				}
-			}
-			else if(game.pengus[nn].dirty) game.pengus[nn].dirty--;
-				
-			if(self.lanes[nn].y.length != 0) {
-				if(self.lanes[nn].y[0] + self.pos.y == 100) {
-					self.lanes[nn].y.shift();
-					self.lanes[nn].pooping = 15;
-				}
+				else if(game.pengus[nn].dirty) game.pengus[nn].dirty--;
+					
+				if(self.lanes[nn].y.length != 0) {
+					if(self.lanes[nn].y[0] + self.pos.y == 100) {
+						self.lanes[nn].y.shift();
+						self.lanes[nn].pooping = 15;
+					}
 
+				}
 			}
 		}
 	}
