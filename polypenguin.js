@@ -3,12 +3,9 @@ $(document).ready(function() {
 	cpos = {x:0,y:0};
 	fps = 16;
 	ordering = [3,4,2,5,1,6,0,7];
-	debug = false;
-	god_mode = false;
 	is_chrome = /chrome/.test( navigator.userAgent.toLowerCase() );
 	var params = getParams();
-	if(params["debug"]) debug = true;
-	if(params["god"] == "dead") god_mode = true;
+	nkeyrollover = (params["as_in"] == "beer") ? true : false;
 			
 	sounds = [];
 	r_keys = ["59","76","75","74"];
@@ -23,7 +20,6 @@ $(document).ready(function() {
 	
 	game = new PGame();
 	game.init();
-//	game.titlescreen();
 
 	$(document).keydown(function(e) {return KeyCapture(e)});
 	
@@ -108,7 +104,11 @@ PGame = function() {
 			while(r--) {
 				returnob.lanes[ordering[r]] = new Object();
 				returnob.lanes[ordering[r]].y = [];
-				for(var n = 0;n < rhythms[r];n++) {
+				if(nkeyrollover) {
+					if(r == 0) returnob.lanes[ordering[r]].y.push(0);
+					else returnob.common.push(0);
+				}
+				for(var n = nkeyrollover ? 1 : 0;n < rhythms[r];n++) { // n-key rollover crippling
 					var ycoord = (csize.h/rhythms[r]*n + 0.5) | 0; //rounding hack
 					if(allpoops.indexOf(ycoord) != -1 &&
 							returnob.common.indexOf(ycoord) == -1)
@@ -459,13 +459,28 @@ PField = function(pos, size, bgimg, order) {
 	this.draw = function(level) {
 		var rhythms = level.rhythms;
 		var r = rhythms.length;
+		if(nkeyrollover) {
+			var addone = addtwo = -1;
+			if(r == 2) addone = 1;
+			else if(r > 2)
+				addone = Math.floor(Math.random()*(r-1)) + 1;
+			if(r > 3)
+				addtwo = Math.floor(Math.random()*(r-1)) + 1;
+		}
 		while(r--) {
 			self.lanes[ordering[r]].y = clone(game.level.lanes[ordering[r]].y);
+			if(nkeyrollover) {
+				if(r == addone) self.lanes[ordering[r]].y.unshift(0);
+				else if(r == addtwo) self.lanes[ordering[r]].y.unshift(0);
+			}
 			for(var n = 0;n < rhythms[r];n++) {
 	//			var ycoord = (csize.h/rhythms[r]*n + 0.5) | 0; //rounding hack
 	//			var ycoord = game.level.lanes[ordering[r]].y[n];
 				var ycoord = self.lanes[ordering[r]].y[n];
-				var ycrop = (game.level.common.indexOf(ycoord) != -1) ? 20 : 0;
+				var ycrop = 0;
+				if(game.level.rhythms.length > 1)
+					if(game.level.common.indexOf(ycoord) != -1)
+						ycrop = 20;
 				self.Ctx.drawImage(game.poopimg,0,ycrop,24,20,self.lanes[ordering[r]].x,ycoord,24,20);
 	//			self.lanes[ordering[r]].y.push(ycoord);
 			}
@@ -495,7 +510,7 @@ PField = function(pos, size, bgimg, order) {
 		self.CObj.style.top = self.pos.y + "px";
 		var nn = 8;
 		while(nn--) {
-
+			
 			if(game.pengus[nn].dirty > 500 && game.pengus[nn].mode != 2) 
 				game.pengus[nn].fall();
 			else {
