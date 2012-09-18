@@ -108,7 +108,7 @@ PGame = function() {
 			while(r--) {
 				returnob.lanes[ordering[r]] = new Object();
 				returnob.lanes[ordering[r]].y = [];
-				for(var n = 0;n < rhythms[r];n++) {
+				for(var n = 1;n < rhythms[r];n++) { // n-key rollover crippling
 					var ycoord = (csize.h/rhythms[r]*n + 0.5) | 0; //rounding hack
 					if(allpoops.indexOf(ycoord) != -1 &&
 							returnob.common.indexOf(ycoord) == -1)
@@ -117,6 +117,7 @@ PGame = function() {
 					allpoops.push(ycoord);
 				}
 			}
+			returnob.lanes[ordering[0]].y.unshift(0);
 			returnarr.unshift(returnob);
 		}
 		return returnarr;
@@ -459,13 +460,23 @@ PField = function(pos, size, bgimg, order) {
 	this.draw = function(level) {
 		var rhythms = level.rhythms;
 		var r = rhythms.length;
+		var addone = addtwo = -1;
+		if(r == 2) addone = 1;
+		else if(r > 2)
+			addone = Math.floor(Math.random()*(r-1)) + 1;
+		if(r > 3)
+			addtwo = Math.floor(Math.random()*(r-1)) + 1;
 		while(r--) {
 			self.lanes[ordering[r]].y = clone(game.level.lanes[ordering[r]].y);
+			if(r == addone) self.lanes[ordering[r]].y.unshift(0);
+			else if(r == addtwo) self.lanes[ordering[r]].y.unshift(0);
 			for(var n = 0;n < rhythms[r];n++) {
 	//			var ycoord = (csize.h/rhythms[r]*n + 0.5) | 0; //rounding hack
 	//			var ycoord = game.level.lanes[ordering[r]].y[n];
 				var ycoord = self.lanes[ordering[r]].y[n];
-				var ycrop = (game.level.common.indexOf(ycoord) != -1) ? 20 : 0;
+				var ycrop = 0;
+				if(ycoord == 0 || game.level.common.indexOf(ycoord) != -1)
+					ycrop = 20;
 				self.Ctx.drawImage(game.poopimg,0,ycrop,24,20,self.lanes[ordering[r]].x,ycoord,24,20);
 	//			self.lanes[ordering[r]].y.push(ycoord);
 			}
@@ -495,7 +506,7 @@ PField = function(pos, size, bgimg, order) {
 		self.CObj.style.top = self.pos.y + "px";
 		var nn = 8;
 		while(nn--) {
-
+			
 			if(game.pengus[nn].dirty > 500 && game.pengus[nn].mode != 2) 
 				game.pengus[nn].fall();
 			else {
