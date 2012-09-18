@@ -1,12 +1,12 @@
 POLYRHYTHM PENGUIN v0.1
 
-A game about music, free software, global warming, and scooping up
-after your dog.
+A game about penguins, music, free software, global warming, and scooping up
+after your wooly mammoth.
 
 Live demo at http://chchch.github.com/polypenguin/
 
-If your keyboard doesn't support pressing 8 keys simultaneously,
-try this version: http://chchch.github.com/polypenguin/?as_in=beer
+If your keyboard doesn't support pressing 8 keys simultaneously, try this 
+version: http://chchch.github.com/polypenguin/?as\_in=beer
 
 Tested in Chrome and Firefox, probably works in Safari.
 
