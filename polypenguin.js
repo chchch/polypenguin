@@ -550,7 +550,7 @@ PField = function(pos, size, bgimg, order) {
 				if(self.lanes[nn].y.length != 0) {
 					if(self.lanes[nn].y[0] + self.pos.y == 100) {
 						self.lanes[nn].y.shift();
-						self.lanes[nn].pooping = 15;
+						self.lanes[nn].pooping = 18;
 					}
 
 				}
