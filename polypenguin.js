@@ -213,12 +213,14 @@ PGame = function() {
 			self.story = document.createElement("div");
 			self.story.style.cssText = "position: absolute;top:"+csize.h+"px;margin:0 80px 0 80px;"+
 				"font-family:'Courier';font-style:italic;line-height:140%;font-size:13px;text-align:justify";
-			var storytext = "TUX is a penguin who lives in the Artic Circle! He's"+
-						" in big trouble! GLOBAL WARMING has had a devastating"+
+			var storytext = "TUX is a penguin who lives in the Arctic Circle! He's"+
+						" a penguin on a misson! GLOBAL WARMING has had a devastating"+
 						" effect on the Arctic Permafrost, uncovering MILLENIA"+
 						" of Unscooped Wooly Mammoth Poop in the melting snow!"+
-						" Help TUX keep his feet clean so he and his identical"+
-						" clones can spread FREE SOFTWARE to SANTA'S DATA HAVEN!"+
+						" Help TUX keep his feet clean while he and his friends"+
+						" follow the poop trail to gather enough Wooly Mammoth"+
+						" DNA so that Santa can clone a BABY WOOLY MAMMOTH for"+
+						" Christmas!"+
 						"<br><br>Press SPACEBAR to continue...";
 			self.story.innerHTML = storytext;
 			
@@ -237,7 +239,7 @@ PGame = function() {
 		}
 		if(self.titlecard == 1) {
 			self.story.innerHTML = "Use these keys to help Tux and his friends"+
-									" jump over the evil Wooly Mammoth Poop!"+
+									" JUMP over the evil Wooly Mammoth Poop!"+
 									" Try it!<br><br>When you're ready, press"+
 									" SPACEBAR to start...";
 			self.drawkeys();

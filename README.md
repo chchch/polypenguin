@@ -1,7 +1,7 @@
 POLYRHYTHM PENGUIN v0.1
 
-A game about penguins, music, free software, global warming, and scooping up
-after your wooly mammoth.
+A game about penguins, music, cloning, global warming, Christmas, and scooping 
+up after your wooly mammoth.
 
 Live demo at http://chchch.github.com/polypenguin/
 
