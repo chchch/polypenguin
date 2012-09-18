@@ -183,7 +183,8 @@ PGame = function() {
 		}
 		else if(self.mode == 1) {
 			animator.stop();
-			self.story.innerHTML = "<p style='font-size:20px;font-style:normal;color: #FFFFFF'>"+
+			self.story.innerHTML = 
+				"<p style='font-size:28px;font-style:normal;font-weight:bold;color: #FFFFFF'>"+
 				"POLYPENGUIN PAUSE!</p><p style='color: #FFFFFF'>Press SPACEBAR to continue...</p>";
 			self.story.style.visibility = "visible";
 			self.overlay.style.visibility = "visible";
@@ -203,14 +204,15 @@ PGame = function() {
 
 	this.titlescreen = function() {
 		var Ctx = self.fields[0].Ctx;
+
 		if(self.titlecard == 0) {
 			Ctx.strokeStyle = "#000000";
 			Ctx.font = "normal 40px Courier";
 			Ctx.textAlign = "center";
-			Ctx.strokeText("POLYRHYTHM PENGUIN",csize.w/2,csize.h/2);
+			Ctx.strokeText("POLYRHYTHM PENGUIN",csize.w/2,csize.h/3);
 			self.story = document.createElement("div");
-			self.story.style.cssText = "position: absolute;top:260px;margin:0 80px 0 80px;"+
-				"font-family:'Courier';font-style:italic;font-size:12px;text-align:justify";
+			self.story.style.cssText = "position: absolute;top:"+csize.h+"px;margin:0 80px 0 80px;"+
+				"font-family:'Courier';font-style:italic;line-height:140%;font-size:13px;text-align:justify";
 			var storytext = "TUX is a penguin who lives in the Artic Circle! He's"+
 						" in big trouble! GLOBAL WARMING has had a devastating"+
 						" effect on the Arctic Permafrost, uncovering MILLENIA"+
@@ -228,6 +230,9 @@ PGame = function() {
 			
 			$("#game").append(self.story);
 			self.titlecard++;
+			animator.enqueue(self.titlescreen);
+			self.titlescreen.active = true;
+			animator.start();
 			return false;
 		}
 		if(self.titlecard == 1) {
@@ -251,8 +256,15 @@ PGame = function() {
 			self.clearkeys(clearkeys);
 			return true;
 		}
+		
 	}
-	
+	this.titlescreen.active = false;
+	this.titlescreen.animate = function() {
+		sst = parseInt(self.story.style.top);
+		if(sst-- > 200) self.story.style.top = sst+"px";
+		else self.titlescreen.active = false;
+	}
+
 	this.visiblekeys = [];
 	this.drawkeys = function(keys,field,height) {
 		var keys = keys ? keys : [0,1,2,3,4,5,6,7];
@@ -330,7 +342,8 @@ PGame = function() {
 
 	this.lose = function() {
 		self.mode = 3;
-		self.story.innerHTML = "<p style='font-size:20px;font-style:normal;color:#FFFFFF'>"+
+		self.story.innerHTML = 
+			"<p	style='font-size:22px;font-style:normal;font-weight: bold;color:#FFFFFF'>"+
 			"Tux fainted from being too DIRTY!</p><p style='color:#FFFFFF'>Press"+
 			" SPACEBAR to try again...</p>";
 		self.story.style.visibility = "visible";
@@ -338,7 +351,16 @@ PGame = function() {
 		animator.stop();
 
 	}
-	
+	this.win = function() {
+		self.mode = 3;
+		self.story.innerHTML =
+			"<p	style='font-size:28px;font-style:normal;font-weight:bold;color:#FFFFFF'>"+
+			"YOU WIN!</p><p style='color:#FFFFFF'>Don't worry, more levels coming soon...</p>";
+		self.story.style.visibility = "visible";
+		self.overlay.style.visibility = "visible";
+		animator.stop();
+	}
+
 	this.iter = function(whichfield) {
 		var af = whichfield ? 0 : 1;
 		self.activefield = self.fields[af];
@@ -361,6 +383,7 @@ PGame = function() {
 		var oldll = self.level.rhythms.length;
 		if(self.levelcount < self.levels.length)
 			self.level = self.levels[self.levelcount];
+		else self.win();
 		var ll = self.level.rhythms.length;
 		var pp = 8;
 		var drawkeys = [];
