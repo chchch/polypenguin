@@ -12,6 +12,12 @@ Tested in Chrome and Firefox, probably works in Safari.
 
 ---
 
+TUX sprite adapted from images from the SuperTux Project @
+<http://code.google.com/p/supertux>, licensed under Creative 
+Commons 3.0 BY-SA. All content herein is similarly licensed.
+
+---
+
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or
