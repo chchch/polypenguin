@@ -3,10 +3,10 @@ POLYRHYTHM PENGUIN v0.1
 A game about penguins, music, cloning, global warming, Christmas, and scooping 
 up after your wooly mammoth.
 
-Live demo at http://chchch.github.com/polypenguin/
+Live demo at http://chchch.github.io/polypenguin/
 
 If your keyboard doesn't support pressing 8 keys simultaneously, try this 
-version: http://chchch.github.com/polypenguin/?as_in=beer
+version: http://chchch.github.io/polypenguin/?as_in=beer
 
 Tested in Chrome and Firefox, probably works in Safari.
 
